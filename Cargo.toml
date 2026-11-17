@@ -1,0 +1,47 @@
+[package]
+name = "matts_crosshair"
+version = "0.2.0"
+edition = "2021"
+description = "Matt's Crosshair - Ultra-lightweight customizable crosshair overlay for Windows by Matteo"
+build = "build.rs"
+
+[[bin]]
+name = "matts_crosshair"
+path = "src/main.rs"
+
+# ─── Core Windows API ─────────────────────────────────────────────────────────
+[dependencies.windows]
+version = "0.58"
+features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Gdi",
+  "Win32_UI_WindowsAndMessaging",
+  "Win32_System_LibraryLoader",
+  "Win32_UI_Shell",
+  "Win32_UI_Shell_Common",
+  "Win32_Graphics_Dwm",
+  "Win32_System_Threading",
+  "Win32_UI_Controls",
+  "Win32_UI_Controls_Dialogs",
+]
+
+# ─── Config (JSON) ────────────────────────────────────────────────────────────
+[dependencies]
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# ─── Images (PNG / WEBP / JPEG / BMP) ──────────────────────────────────────────
+# Pixel decoding for custom crosshairs from image files
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp", "webp"] }
+
+# ─── SVG ──────────────────────────────────────────────────────────────────────
+# Rasterizza SVG → bitmap RGBA, poi disegnato via GDI/layered window
+resvg = { version = "0.44", default-features = false }
+
+# ─── Profilo release ultra-compatto ───────────────────────────────────────────
+[profile.release]
+opt-level     = "z"   # ottimizza per dimensione binario
+lto           = true  # link-time optimization
+codegen-units = 1     # singola unità per LTO massimo
+panic         = "abort"
+strip         = true  # rimuove simboli debug dal binario
