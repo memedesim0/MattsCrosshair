@@ -36,17 +36,11 @@ pub unsafe fn enumerate_monitors() -> Vec<MonitorInfo> {
             let is_primary = (mi.monitorInfo.dwFlags & MONITORINFOF_PRIMARY) != 0;
 
             let idx = list.len();
-            let label = if is_primary {
-                format!("Monitor {} ({}x{}) [Primary]", idx + 1, w, h)
-            } else {
-                format!("Monitor {} ({}x{})", idx + 1, w, h)
-            };
-
             list.push(MonitorInfo {
                 index: idx,
                 rect: rc,
                 is_primary,
-                name: label,
+                name: String::new(),
                 width: w,
                 height: h,
             });
@@ -68,10 +62,24 @@ pub unsafe fn enumerate_monitors() -> Vec<MonitorInfo> {
             index: 0,
             rect: RECT { left: 0, top: 0, right: sw, bottom: sh },
             is_primary: true,
-            name: format!("Monitor 1 ({}x{}) [Primary]", sw, sh),
+            name: format!("Monitor 1 ({}x{}) [Principale]", sw, sh),
             width: sw,
             height: sh,
         });
+    } else {
+        // Sort: Primary monitor first (index 0), then left-to-right by screen coordinates
+        monitors.sort_by(|a, b| {
+            b.is_primary.cmp(&a.is_primary).then_with(|| a.rect.left.cmp(&b.rect.left))
+        });
+
+        for (i, mon) in monitors.iter_mut().enumerate() {
+            mon.index = i;
+            mon.name = if mon.is_primary {
+                format!("Monitor {} ({}x{}) [Principale]", i + 1, mon.width, mon.height)
+            } else {
+                format!("Monitor {} ({}x{})", i + 1, mon.width, mon.height)
+            };
+        }
     }
 
     monitors

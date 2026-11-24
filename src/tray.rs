@@ -3,6 +3,7 @@ use windows::Win32::UI::Shell::*;
 use windows::Win32::Foundation::*;
 use windows::core::PCWSTR;
 use std::mem;
+use crate::config::{Color, CrosshairStyle};
 
 pub const WM_TRAY: u32 = WM_USER + 1;
 
@@ -53,7 +54,7 @@ pub unsafe fn add_tray_icon(hwnd: HWND) {
     // Custom thick red logo with white outline
     nid.hIcon = crate::create_logo_icon().unwrap_or_else(|| LoadIconW(None, IDI_APPLICATION).unwrap_or_default());
 
-    let tip = to_wide("Matt's Crosshair (Right-click: Menu, Double-click: Settings)");
+    let tip = to_wide("Matt's Crosshair (Tasto destro: Menu, Doppio clic: Impostazioni)");
     let len = tip.len().min(nid.szTip.len());
     nid.szTip[..len].copy_from_slice(&tip[..len]);
     let _ = Shell_NotifyIconW(NIM_ADD, &nid);
@@ -77,7 +78,7 @@ pub unsafe fn show_context_menu(hwnd: HWND) {
 
     let cfg = crate::get_config();
 
-    // Monitors submenu
+    // Sottomenu Monitor / Schermi
     let monitors = crate::monitor::enumerate_monitors();
     for (i, mon) in monitors.iter().enumerate() {
         let mut flags = MF_STRING;
@@ -88,47 +89,60 @@ pub unsafe fn show_context_menu(hwnd: HWND) {
         AppendMenuW(hmonitors, flags, item_id, PCWSTR(to_wide(&mon.name).as_ptr())).unwrap();
     }
 
-    // Style submenu
-    AppendMenuW(hstyle, MF_STRING, ID_TRAY_STYLE_CROSS as usize, PCWSTR(to_wide("Cross").as_ptr())).unwrap();
-    AppendMenuW(hstyle, MF_STRING, ID_TRAY_STYLE_CIRCLE as usize, PCWSTR(to_wide("Circle").as_ptr())).unwrap();
-    AppendMenuW(hstyle, MF_STRING, ID_TRAY_STYLE_DOT as usize, PCWSTR(to_wide("Dot (Pro)").as_ptr())).unwrap();
-    AppendMenuW(hstyle, MF_STRING, ID_TRAY_STYLE_IMAGE as usize, PCWSTR(to_wide("Custom Image").as_ptr())).unwrap();
+    // Sottomenu Stile / Forma
+    let check_cross = if cfg.style == CrosshairStyle::Cross { MF_CHECKED } else { MF_UNCHECKED };
+    let check_circle = if cfg.style == CrosshairStyle::Circle { MF_CHECKED } else { MF_UNCHECKED };
+    let check_dot = if cfg.style == CrosshairStyle::Dot { MF_CHECKED } else { MF_UNCHECKED };
+    let check_img = if cfg.style == CrosshairStyle::Image { MF_CHECKED } else { MF_UNCHECKED };
 
-    // Quick Size submenu (1 to 200 px options)
-    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_MICRO as usize, PCWSTR(to_wide("Micro (1 px - Competitive)").as_ptr())).unwrap();
-    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_TINY as usize, PCWSTR(to_wide("Tiny (3 px)").as_ptr())).unwrap();
+    AppendMenuW(hstyle, MF_STRING | check_cross, ID_TRAY_STYLE_CROSS as usize, PCWSTR(to_wide("Croce (Cross)").as_ptr())).unwrap();
+    AppendMenuW(hstyle, MF_STRING | check_circle, ID_TRAY_STYLE_CIRCLE as usize, PCWSTR(to_wide("Cerchio (Circle)").as_ptr())).unwrap();
+    AppendMenuW(hstyle, MF_STRING | check_dot, ID_TRAY_STYLE_DOT as usize, PCWSTR(to_wide("Solo Punto (Dot)").as_ptr())).unwrap();
+    AppendMenuW(hstyle, MF_STRING | check_img, ID_TRAY_STYLE_IMAGE as usize, PCWSTR(to_wide("Immagine Personalizzata (Custom Image)").as_ptr())).unwrap();
+
+    // Sottomenu Dimensioni rapide (1 a 150 px)
+    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_MICRO as usize, PCWSTR(to_wide("Micro (1 px)").as_ptr())).unwrap();
+    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_TINY as usize, PCWSTR(to_wide("Minuscolo (3 px)").as_ptr())).unwrap();
     AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_PRO as usize, PCWSTR(to_wide("Pro (6 px)").as_ptr())).unwrap();
-    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_MEDIUM as usize, PCWSTR(to_wide("Medium (14 px)").as_ptr())).unwrap();
-    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_LARGE as usize, PCWSTR(to_wide("Large (30 px)").as_ptr())).unwrap();
-    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_XL as usize, PCWSTR(to_wide("Extra Large (75 px)").as_ptr())).unwrap();
-    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_MASSIVE as usize, PCWSTR(to_wide("Massive (150 px)").as_ptr())).unwrap();
+    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_MEDIUM as usize, PCWSTR(to_wide("Medio (14 px)").as_ptr())).unwrap();
+    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_LARGE as usize, PCWSTR(to_wide("Grande (30 px)").as_ptr())).unwrap();
+    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_XL as usize, PCWSTR(to_wide("Molto grande (75 px)").as_ptr())).unwrap();
+    AppendMenuW(hsize, MF_STRING, ID_TRAY_SIZE_MASSIVE as usize, PCWSTR(to_wide("Massivo (150 px)").as_ptr())).unwrap();
 
-    // Color submenu
-    AppendMenuW(hcolor, MF_STRING, ID_TRAY_COLOR_GREEN as usize, PCWSTR(to_wide("Green").as_ptr())).unwrap();
-    AppendMenuW(hcolor, MF_STRING, ID_TRAY_COLOR_RED as usize, PCWSTR(to_wide("Red").as_ptr())).unwrap();
-    AppendMenuW(hcolor, MF_STRING, ID_TRAY_COLOR_CYAN as usize, PCWSTR(to_wide("Cyan").as_ptr())).unwrap();
-    AppendMenuW(hcolor, MF_STRING, ID_TRAY_COLOR_YELLOW as usize, PCWSTR(to_wide("Yellow").as_ptr())).unwrap();
-    AppendMenuW(hcolor, MF_STRING, ID_TRAY_COLOR_WHITE as usize, PCWSTR(to_wide("White").as_ptr())).unwrap();
+    // Sottomenu Colore
+    let check_g = if cfg.color == Color::GREEN { MF_CHECKED } else { MF_UNCHECKED };
+    let check_r = if cfg.color == Color::RED { MF_CHECKED } else { MF_UNCHECKED };
+    let check_c = if cfg.color == Color::CYAN { MF_CHECKED } else { MF_UNCHECKED };
+    let check_y = if cfg.color == Color::YELLOW { MF_CHECKED } else { MF_UNCHECKED };
+    let check_w = if cfg.color == Color::WHITE { MF_CHECKED } else { MF_UNCHECKED };
 
-    // Main context menu
-    AppendMenuW(hmenu, MF_STRING, ID_TRAY_SETTINGS as usize, PCWSTR(to_wide("⚙ Settings & Sliders...").as_ptr())).unwrap();
-    AppendMenuW(hmenu, MF_STRING, ID_TRAY_OPEN_FOLDER as usize, PCWSTR(to_wide("📂 Open Crosshairs Folder...").as_ptr())).unwrap();
-    AppendMenuW(hmenu, MF_STRING, ID_TRAY_USE_LOGO as usize, PCWSTR(to_wide("🎯 Set Red Logo Crosshair").as_ptr())).unwrap();
+    AppendMenuW(hcolor, MF_STRING | check_g, ID_TRAY_COLOR_GREEN as usize, PCWSTR(to_wide("Verde").as_ptr())).unwrap();
+    AppendMenuW(hcolor, MF_STRING | check_r, ID_TRAY_COLOR_RED as usize, PCWSTR(to_wide("Rosso").as_ptr())).unwrap();
+    AppendMenuW(hcolor, MF_STRING | check_c, ID_TRAY_COLOR_CYAN as usize, PCWSTR(to_wide("Ciano").as_ptr())).unwrap();
+    AppendMenuW(hcolor, MF_STRING | check_y, ID_TRAY_COLOR_YELLOW as usize, PCWSTR(to_wide("Giallo").as_ptr())).unwrap();
+    AppendMenuW(hcolor, MF_STRING | check_w, ID_TRAY_COLOR_WHITE as usize, PCWSTR(to_wide("Bianco").as_ptr())).unwrap();
+
+    // Menu contestuale principale
+    AppendMenuW(hmenu, MF_STRING, ID_TRAY_SETTINGS as usize, PCWSTR(to_wide("⚙ Impostazioni Mirino & Slider...").as_ptr())).unwrap();
+    AppendMenuW(hmenu, MF_STRING, ID_TRAY_OPEN_FOLDER as usize, PCWSTR(to_wide("📂 Apri Cartella Mirini...").as_ptr())).unwrap();
+    AppendMenuW(hmenu, MF_STRING, ID_TRAY_USE_LOGO as usize, PCWSTR(to_wide("🎯 Imposta Logo Rosso Originale").as_ptr())).unwrap();
     AppendMenuW(hmenu, MF_SEPARATOR, 0, PCWSTR::null()).unwrap();
 
-    AppendMenuW(hmenu, MF_STRING | MF_POPUP, hmonitors.0 as usize, PCWSTR(to_wide("Monitor / Display").as_ptr())).unwrap();
-    AppendMenuW(hmenu, MF_STRING | MF_POPUP, hstyle.0 as usize, PCWSTR(to_wide("Style").as_ptr())).unwrap();
-    AppendMenuW(hmenu, MF_STRING | MF_POPUP, hsize.0 as usize, PCWSTR(to_wide("Quick Size").as_ptr())).unwrap();
-    AppendMenuW(hmenu, MF_STRING | MF_POPUP, hcolor.0 as usize, PCWSTR(to_wide("Color").as_ptr())).unwrap();
+    AppendMenuW(hmenu, MF_STRING | MF_POPUP, hmonitors.0 as usize, PCWSTR(to_wide("📺 Schermo / Monitor").as_ptr())).unwrap();
+    AppendMenuW(hmenu, MF_STRING | MF_POPUP, hstyle.0 as usize, PCWSTR(to_wide("Forma / Stile").as_ptr())).unwrap();
+    AppendMenuW(hmenu, MF_STRING | MF_POPUP, hsize.0 as usize, PCWSTR(to_wide("Dimensioni Rapide").as_ptr())).unwrap();
+    AppendMenuW(hmenu, MF_STRING | MF_POPUP, hcolor.0 as usize, PCWSTR(to_wide("Colore").as_ptr())).unwrap();
 
     AppendMenuW(hmenu, MF_SEPARATOR, 0, PCWSTR::null()).unwrap();
-    AppendMenuW(hmenu, MF_STRING, ID_TRAY_TOGGLE_OUTLINE as usize, PCWSTR(to_wide("Toggle Black Outline").as_ptr())).unwrap();
-    AppendMenuW(hmenu, MF_STRING, ID_TRAY_TOGGLE_DOT as usize, PCWSTR(to_wide("Toggle Center Dot").as_ptr())).unwrap();
+    let chk_out = if cfg.outline { MF_CHECKED } else { MF_UNCHECKED };
+    let chk_dt = if cfg.dot { MF_CHECKED } else { MF_UNCHECKED };
+    AppendMenuW(hmenu, MF_STRING | chk_out, ID_TRAY_TOGGLE_OUTLINE as usize, PCWSTR(to_wide("Bordo Nero (Outline)").as_ptr())).unwrap();
+    AppendMenuW(hmenu, MF_STRING | chk_dt, ID_TRAY_TOGGLE_DOT as usize, PCWSTR(to_wide("Punto Centrale (Dot)").as_ptr())).unwrap();
     AppendMenuW(hmenu, MF_SEPARATOR, 0, PCWSTR::null()).unwrap();
-    AppendMenuW(hmenu, MF_STRING, ID_TRAY_RESET_DEFAULT as usize, PCWSTR(to_wide("Reset to Default").as_ptr())).unwrap();
+    AppendMenuW(hmenu, MF_STRING, ID_TRAY_RESET_DEFAULT as usize, PCWSTR(to_wide("Ripristina Predefiniti").as_ptr())).unwrap();
 
-    // Shutdown with remote power off symbol ⏻
-    AppendMenuW(hmenu, MF_STRING, ID_TRAY_EXIT as usize, PCWSTR(to_wide("⏻ Shutdown").as_ptr())).unwrap();
+    // Shutdown con icona ⏻
+    AppendMenuW(hmenu, MF_STRING, ID_TRAY_EXIT as usize, PCWSTR(to_wide("⏻ Chiudi Matt's Crosshair").as_ptr())).unwrap();
 
     let mut pt = POINT::default();
     let _ = GetCursorPos(&mut pt);

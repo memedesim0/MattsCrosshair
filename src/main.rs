@@ -9,7 +9,7 @@ mod tray;
 
 use config::{Color, CrosshairConfig, CrosshairStyle};
 use draw::render_crosshair;
-use settings_gui::{notify_overlay_update, open_image_dialog, set_overlay_hwnd, show_settings_window, WM_APP_UPDATE};
+use settings_gui::{notify_overlay_update, notify_settings_update, open_image_dialog, set_overlay_hwnd, show_settings_window, WM_APP_UPDATE};
 use tray::*;
 use windows::{
     core::*,
@@ -186,6 +186,12 @@ unsafe extern "system" fn overlay_wnd_proc(
             LRESULT(0)
         }
 
+        WM_DISPLAYCHANGE => {
+            update_overlay(hwnd);
+            notify_settings_update();
+            LRESULT(0)
+        }
+
         WM_TRAY => {
             let event = lparam.0 as u32;
             if event == WM_RBUTTONUP || event == WM_CONTEXTMENU {
@@ -274,6 +280,7 @@ unsafe extern "system" fn overlay_wnd_proc(
             if changed {
                 set_config(cfg);
                 notify_overlay_update();
+                notify_settings_update();
             }
 
             LRESULT(0)
