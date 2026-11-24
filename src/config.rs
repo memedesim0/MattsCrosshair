@@ -87,13 +87,41 @@ impl Default for CrosshairConfig {
 }
 
 impl CrosshairConfig {
-    pub fn config_path() -> PathBuf {
-        let mut p = dirs_config();
-        p.push("crosshair.json");
-        p
+    /// Directory in which the executable resides (always used instead of current working directory)
+    pub fn exe_dir() -> PathBuf {
+        if let Ok(exe) = std::env::current_exe() {
+            if let Some(parent) = exe.parent() {
+                return parent.to_path_buf();
+            }
+        }
+        PathBuf::from(".")
     }
 
+    /// Full path to crosshair.json in the executable's directory
+    pub fn config_path() -> PathBuf {
+        Self::exe_dir().join("crosshair.json")
+    }
+
+    /// Full path to custom_crosshairs/ in the executable's directory.
+    /// Automatically created if missing, and initializes default logo.png.
+    pub fn custom_crosshairs_dir() -> PathBuf {
+        let dir = Self::exe_dir().join("custom_crosshairs");
+        let _ = std::fs::create_dir_all(&dir);
+
+        let default_logo = dir.join("logo.png");
+        if !default_logo.exists() {
+            let png_bytes = include_bytes!("../assets/logo.png");
+            let _ = std::fs::write(&default_logo, png_bytes);
+        }
+
+        dir
+    }
+
+    /// Loads config from executable's directory, or creates default on first launch.
     pub fn load() -> Self {
+        // Ensure custom crosshairs folder and default logo are initialized
+        let _ = Self::custom_crosshairs_dir();
+
         let path = Self::config_path();
         if path.exists() {
             if let Ok(data) = std::fs::read_to_string(&path) {
@@ -107,25 +135,7 @@ impl CrosshairConfig {
         default
     }
 
-    pub fn custom_crosshairs_dir() -> PathBuf {
-        let local = PathBuf::from("custom_crosshairs");
-        if local.exists() {
-            return local;
-        }
-        if let Ok(exe) = std::env::current_exe() {
-            if let Some(parent) = exe.parent() {
-                let exe_local = parent.join("custom_crosshairs");
-                if exe_local.exists() {
-                    return exe_local;
-                }
-            }
-        }
-        let mut p = dirs_config();
-        p.push("custom_crosshairs");
-        let _ = std::fs::create_dir_all(&p);
-        p
-    }
-
+    /// Saves config to crosshair.json in the executable's directory
     pub fn save(&self) -> std::io::Result<()> {
         let path = Self::config_path();
         if let Some(parent) = path.parent() {
@@ -133,27 +143,5 @@ impl CrosshairConfig {
         }
         let json = serde_json::to_string_pretty(self).unwrap();
         std::fs::write(path, json)
-    }
-}
-
-fn dirs_config() -> PathBuf {
-    let local = PathBuf::from("crosshair.json");
-    if local.exists() {
-        return PathBuf::from(".");
-    }
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            let exe_local = parent.join("crosshair.json");
-            if exe_local.exists() {
-                return parent.to_path_buf();
-            }
-        }
-    }
-    if let Ok(appdata) = std::env::var("APPDATA") {
-        let mut p = PathBuf::from(appdata);
-        p.push("MattsCrosshair");
-        p
-    } else {
-        PathBuf::from(".")
     }
 }

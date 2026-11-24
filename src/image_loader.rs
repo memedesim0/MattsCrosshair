@@ -1,18 +1,39 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Loads an image (PNG, WEBP, SVG, JPG, BMP) and returns (width, height, premultiplied_bgra_bytes)
 pub fn load_image_bgra(path: &str, target_size: u32) -> Result<(u32, u32, Vec<u8>), String> {
-    let p = Path::new(path);
-    if !p.exists() {
-        return Err(format!("File not found: {}", path));
-    }
+    let p_raw = Path::new(path);
+    let resolved_path: PathBuf = if p_raw.is_absolute() && p_raw.exists() {
+        p_raw.to_path_buf()
+    } else {
+        // 1. Try relative to the executable directory
+        let from_exe = crate::config::CrosshairConfig::exe_dir().join(p_raw);
+        if from_exe.exists() {
+            from_exe
+        } else {
+            // 2. Try inside custom_crosshairs directory
+            let file_name = p_raw.file_name().unwrap_or(p_raw.as_os_str());
+            let in_custom = crate::config::CrosshairConfig::custom_crosshairs_dir().join(file_name);
+            if in_custom.exists() {
+                in_custom
+            } else if p_raw.exists() {
+                p_raw.to_path_buf()
+            } else {
+                return Err(format!("File not found: {}", path));
+            }
+        }
+    };
 
-    let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+    let ext = resolved_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
 
     if ext == "svg" {
-        load_svg(p, target_size)
+        load_svg(&resolved_path, target_size)
     } else {
-        load_raster(p, target_size)
+        load_raster(&resolved_path, target_size)
     }
 }
 

@@ -4,8 +4,8 @@ A desktop crosshair overlay for Windows written in Rust.
 
 ## Usage
 
-1. Click **Code** -> **Download ZIP** and extract the folder.
-2. Run `target\release\matts_crosshair.exe` (optionally create a desktop shortcut).
+1. Go to the [Releases](../../releases/latest) page, download the latest Windows `.zip`, and extract it.
+2. Run `matts_crosshair.exe` (optionally create a desktop shortcut).
 3. Use the system tray icon to open settings or exit.
 
 If Windows SmartScreen blocks the first launch, click **More info** -> **Run anyway**.

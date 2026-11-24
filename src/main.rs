@@ -236,7 +236,7 @@ unsafe extern "system" fn overlay_wnd_proc(
                         }
                     }
                     ID_TRAY_USE_LOGO => {
-                        let logo_path = CrosshairConfig::custom_crosshairs_dir().join("logo.svg");
+                        let logo_path = CrosshairConfig::custom_crosshairs_dir().join("logo.png");
                         cfg.image_path = Some(logo_path.to_string_lossy().to_string());
                         cfg.style = CrosshairStyle::Image;
                     }
@@ -246,7 +246,7 @@ unsafe extern "system" fn overlay_wnd_proc(
                     ID_TRAY_STYLE_IMAGE => {
                         cfg.style = CrosshairStyle::Image;
                         if cfg.image_path.is_none() {
-                            let logo_path = CrosshairConfig::custom_crosshairs_dir().join("logo.svg");
+                            let logo_path = CrosshairConfig::custom_crosshairs_dir().join("logo.png");
                             cfg.image_path = Some(logo_path.to_string_lossy().to_string());
                         }
                     }

@@ -371,10 +371,12 @@ unsafe fn create_controls(hwnd: HWND, hinstance: HINSTANCE) {
     SendMessageW(h_lb, WM_SETFONT, WPARAM(font.0 as usize), LPARAM(1));
     LIST_CUSTOM.with(|l| *l.borrow_mut() = h_lb);
 
-    let active_txt = format!(
-        "File attivo: {}",
-        cfg.image_path.as_deref().unwrap_or("logo.svg")
-    );
+    let active_file = cfg
+        .image_path
+        .as_deref()
+        .and_then(|p| Path::new(p).file_name().and_then(|n| n.to_str()))
+        .unwrap_or("logo.png");
+    let active_txt = format!("File attivo: {}", active_file);
     let lbl_act = create_label(hwnd, hinstance, &active_txt, 20, 284, 430, 16, font);
     LBL_ACTIVE_IMAGE.with(|l| *l.borrow_mut() = lbl_act);
 
@@ -1078,7 +1080,7 @@ pub unsafe extern "system" fn settings_wnd_proc(
                 ID_MODE_IMAGE => {
                     cfg.style = CrosshairStyle::Image;
                     if cfg.image_path.is_none() {
-                        let default_logo = CrosshairConfig::custom_crosshairs_dir().join("logo.svg");
+                        let default_logo = CrosshairConfig::custom_crosshairs_dir().join("logo.png");
                         cfg.image_path = Some(default_logo.to_string_lossy().to_string());
                     }
                     update_ui_layout_and_visibility(hwnd, &cfg);
@@ -1213,9 +1215,9 @@ pub unsafe extern "system" fn settings_wnd_proc(
                                 let _ = std::fs::remove_file(file_path);
                                 refresh_custom_list();
 
-                                let fallback = folder.join("logo.svg");
+                                let fallback = folder.join("logo.png");
                                 cfg.image_path = Some(fallback.to_string_lossy().to_string());
-                                LBL_ACTIVE_IMAGE.with(|lbl| update_label(*lbl.borrow(), "File attivo: logo.svg"));
+                                LBL_ACTIVE_IMAGE.with(|lbl| update_label(*lbl.borrow(), "File attivo: logo.png"));
                             }
                         }
                     });
